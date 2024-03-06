@@ -7,37 +7,41 @@ module.exports = {
     },
     defaultConfigDetails: {
         premiumUnits: { label: 'Premium units to track, separated by comma', type: 'textarea' },
-        unitAmount: { label: 'Usage of premium units by each player', type: 'textarea'},
-        export: { label: 'Export default structure for guild members for currently selected premium units'}
+        unitAmount: { label: 'Usage of premium units by each player', type: 'textarea' },
+        export: { label: 'Export default structure for guild members for currently selected premium units' }
     },
     pluginName: "Premium offense unit tracker",
     pluginDescription: "Plugin to track your guilds premium offense units",
     init(proxy, config) {
-        globalProxy = proxy;
         if (config.Config.Plugins[this.pluginName].enabled) {
             sendProxyMessage(proxy, "Tracking the following premium units: " + config.Config.Plugins[this.pluginName].premiumUnits);
         }
-
         proxy.on("GetGuildSiegeBattleLog", (req, resp) => {
-            if (config.Config.Plugins[this.pluginName].enabled && config.Config.Plugins[this.pluginName].premiumUnits != '') {
-                let trimmed_premium_units = config.Config.Plugins[this.pluginName].premiumUnits.trim().replace(/ /g, '');
-                let premium_units_ids = setupPremiumUnitsToLookFor(trimmed_premium_units);
-                this.decodeData(proxy, resp, premium_units_ids,  config.Config.Plugins[this.pluginName].unitAmount);
+            try {
+                if (config.Config.Plugins[this.pluginName].enabled && config.Config.Plugins[this.pluginName].premiumUnits != '') {
+                    let trimmed_premium_units = config.Config.Plugins[this.pluginName].premiumUnits.trim().replace(/ /g, '');
+                    let premium_units_ids = setupPremiumUnitsToLookFor(trimmed_premium_units);
+                    this.decodeData(proxy, resp, premium_units_ids, config.Config.Plugins[this.pluginName].unitAmount);
+                }
+            } catch (err) {
+                sendProxyMessage(proxy, "Seems like there was an error, please contact the maintainer of this plugin. Error: " + err);
             }
         });
 
         //used for building a default member mapping
         proxy.on("GetGuildInfo", (req, resp) => {
-          if (config.Config.Plugins[this.pluginName].enabled && config.Config.Plugins[this.pluginName].export) {
-                let trimmed_premium_units = config.Config.Plugins[this.pluginName].premiumUnits.trim().replace(/ /g, '');
-                exportMemberList(proxy, resp, trimmed_premium_units);
+            try {
+                if (config.Config.Plugins[this.pluginName].enabled && config.Config.Plugins[this.pluginName].export) {
+                    let trimmed_premium_units = config.Config.Plugins[this.pluginName].premiumUnits.trim().replace(/ /g, '');
+                    exportMemberList(proxy, resp, trimmed_premium_units);
+                }
+            } catch (err) {
+                sendProxyMessage(proxy, "Seems like there was an error, please contact the maintainer of this plugin. Error: " + err);
             }
         })
+
     },
     decodeData(proxy, siegeBattleLog, premium_units_ids, playerUnitsCount) {
-
-      sendProxyMessage(proxy, JSON.stringify(playerUnitsCount));
-
         let battle_log_list = siegeBattleLog["log_list"][0]["battle_log_list"];
 
         let units_used = trackMonsterUsage(battle_log_list, monster, premium_units_ids);
@@ -45,37 +49,37 @@ module.exports = {
         let accumulatedUnitUsages = accumulateUnitUsage(units_used);
 
         let htmlToDisplay = createPlayerUsageHTML(units_used, playerUnitsCount);
-
-        sendProxyMessage(proxy, htmlToDisplay);
-
+        if (htmlToDisplay != null) {
+            sendProxyMessage(proxy, htmlToDisplay);
+        }
         let htmlUsagesHTML = createTotalUsageHTML(accumulatedUnitUsages);
         sendProxyMessage(proxy, htmlUsagesHTML);
     },
 };
 
 function exportMemberList(proxy, data, premiumUnits) {
-  let memberListData = data["guild"]["guild_members"];
-  let memberList = Object.values(memberListData).map(player => player.wizard_name);
+    let memberListData = data["guild"]["guild_members"];
+    let memberList = Object.values(memberListData).map(player => player.wizard_name);
 
-  let premiumUnitsArray = premiumUnits.split(',');
+    let premiumUnitsArray = premiumUnits.split(',');
 
-  let playerUnitsCount = {};
+    let playerUnitsCount = {};
 
-  memberList.forEach(player => {
-      let monstersCount = {};
-      premiumUnitsArray.forEach(monster => {
-          monstersCount[monster] = 0;
-      });
-      playerUnitsCount[player] = monstersCount;
-  });
-  let htmlToDisplay = createDefaultMappingHTML(playerUnitsCount);
-  sendProxyMessage(proxy, htmlToDisplay);
+    memberList.forEach(player => {
+        let monstersCount = {};
+        premiumUnitsArray.forEach(monster => {
+            monstersCount[monster] = 0;
+        });
+        playerUnitsCount[player] = monstersCount;
+    });
+    let htmlToDisplay = createDefaultMappingHTML(playerUnitsCount);
+    sendProxyMessage(proxy, htmlToDisplay);
 }
 
 function createDefaultMappingHTML(defaultMapping) {
-  let prettyJson = JSON.stringify(defaultMapping, null, 2);
+    let prettyJson = JSON.stringify(defaultMapping, null, 2);
 
-  let htmlContent = `
+    let htmlContent = `
   <!DOCTYPE html>
   <html>
   <head>
@@ -99,16 +103,14 @@ function createDefaultMappingHTML(defaultMapping) {
   </body>
   </html>
       `;
-      return htmlContent;
+    return htmlContent;
 }
 
 function createTotalUsageHTML(usageData) {
     let htmlContent = '<html><body><ul>';
-
     for (const unit in usageData) {
         htmlContent += `<li>${unit}: Used ${usageData[unit]} times</li>`;
     }
-
     htmlContent += '</ul></body></html>';
     return htmlContent;
 }
@@ -123,8 +125,11 @@ function sendProxyMessage(proxy, message_to_send) {
 }
 
 function createPlayerUsageHTML(usageData, playerUnitsCount) {
+    if (playerUnitsCount === '') {
+        return null;
+    }
     let htmlContent = '<html><body><ul>';
-    for (const player in playerUnitsCount) { 
+    for (const player in playerUnitsCount) {
         htmlContent += `<li>${player}: <ul>`;
         for (const unit in playerUnitsCount[player]) {
             let usageCount = usageData[player] && usageData[player][unit] !== undefined ? usageData[player][unit] : 0;

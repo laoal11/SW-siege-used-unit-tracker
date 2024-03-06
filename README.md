@@ -3,7 +3,7 @@ SWEX Proxy plugin to track the number of used premium units of each member
 
 ## How to use
 
-Move the premium_unit_tracker.js file to your **"plugins"** folder in your Summoners War Exporter Files. The path to the Summoners War Exporter Files folder can be found at the top of your Settings in the Summoners War Exporter. If no "plugins" folder exists yet, create one. 
+Move the **premium_unit_tracker.js** file to your **"plugins"** folder in your Summoners War Exporter Files. The path to the Summoners War Exporter Files folder can be found at the top of your Settings in the Summoners War Exporter. If no "plugins" folder exists yet, create one. 
 
 The next time you start your Summoners War Exporter, you should find a new section **"Premium offense unit tracker"** within your Settings. By default this plugin is enabled, you can disable it by unticking the "Enabled" checkbox. Next you can enter the names of the units you want to track per player separated by comma into the **"Premium units to track, separated by comma"** textarea. E.g. "Leo, Tetra, Kinki, Kiki, Mirinae". The next time you go to the siege section ingame, you can click on the "Info" button to show the latest siege attacks for the current or last siege. With this setup only, you should see how often each premium unit was used in the current or last siege. The result in your Summoners War Exporter Logs should look something like this:
 
